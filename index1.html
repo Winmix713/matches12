@@ -1,0 +1,855 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="WinMix - Matches and League Details">
+    <meta name="theme-color" content="#CCFF00">
+    <title>WinMix - Matches and League Details</title>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://unpkg.com/papaparse@latest"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#CCFF00',
+                        background: '#0A0A0A',
+                        surface: '#141414',
+                    },
+                    fontFamily: {
+                        sans: ['Space Grotesk', 'sans-serif'],
+                    },
+                },
+            },
+        }
+    </script>
+    <style>
+        body {
+            font-family: 'Space Grotesk', sans-serif;
+            background-image: url('https://hebbkx1anhila5yf.public.blob.vercel-storage.com/image-R9H8LpcK4zLfWLt8yALsCmQubfqzpJ.png');
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
+            color: #FFFFFF;
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .glass-effect {
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            background: rgba(20, 20, 20, 0.8);
+        }
+
+        .container {
+            width: 100%;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 1rem;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        header {
+            position: sticky;
+            top: 0;
+            z-index: 50;
+            border-bottom: 1px solid rgba(204, 255, 0, 0.1);
+        }
+
+        main {
+            flex-grow: 1;
+            padding: 2rem 0;
+        }
+
+        footer {
+            border-top: 1px solid rgba(204, 255, 0, 0.1);
+            padding: 1.5rem 0;
+            text-align: center;
+            color: rgba(255, 255, 255, 0.6);
+        }
+
+        .main-nav {
+            display: none;
+        }
+
+        @media (min-width: 768px) {
+            .main-nav {
+                display: flex;
+                align-items: center;
+                gap: 1.5rem;
+            }
+        }
+
+        .nav-link-active {
+            background-color: #0A0A0A;
+            color: #CCFF00;
+            border: 1px solid #CCFF00;
+            box-shadow: 0 0 10px rgba(204, 255, 0, 0.2);
+            font-weight: 500;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        .animate-spin {
+            animation: spin 1s linear infinite;
+        }
+        .animate-cardAppear {
+            animation: cardAppear 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+            will-change: transform, opacity;
+        }
+        @keyframes cardAppear {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        @media (prefers-reduced-motion: reduce) {
+            .animate-cardAppear, .animate-spin {
+                animation: none;
+            }
+        }
+    </style>
+</head>
+<body class="min-h-screen">
+    <header class="glass-effect">
+        <div class="container">
+            <div class="flex justify-between items-center py-4">
+                <div class="flex items-center gap-2">
+                    <span class="text-2xl font-bold">win<span class="text-primary">mix</span></span>
+                    <div class="px-2 py-1 bg-primary/10 rounded-md">
+                        <span class="text-xs font-medium text-primary">BETA</span>
+                    </div>
+                </div>
+                
+                <nav class="main-nav" role="navigation" aria-label="Main navigation">
+                    <a href="index.html" class="text-white/60 hover:text-primary transition-colors focus:outline-none focus:ring-2 focus:ring-primary/50 rounded-lg px-2 py-1">Predictions</a>
+                    <a href="h2h.html" class="text-white/60 hover:text-primary transition-colors focus:outline-none focus:ring-2 focus:ring-primary/50 rounded-lg px-2 py-1">H2H</a>
+                    <a href="teams.html" class="text-white/60 hover:text-primary transition-colors focus:outline-none focus:ring-2 focus:ring-primary/50 rounded-lg px-2 py-1">Teams</a>
+                    <a href="matches.html" class="nav-link-active rounded-lg px-2 py-1" aria-current="page">Matches</a>
+                    <a href="control-panel.html" class="text-white/60 hover:text-primary transition-colors focus:outline-none focus:ring-2 focus:ring-primary/50 rounded-lg px-2 py-1">Control Panel</a>
+                    <a href="settings.html" class="text-white/60 hover:text-primary transition-colors focus:outline-none focus:ring-2 focus:ring-primary/50 rounded-lg px-2 py-1">Settings</a>
+                </nav>
+            </div>
+        </div>
+    </header>
+
+    <main class="container mx-auto px-4 py-8">
+        <h1 class="text-4xl font-bold text-[#CCFF00] mb-6">Matches Schedule</h1>
+        <div class="bg-black/70 backdrop-blur-md rounded-lg shadow-lg border border-white/10 overflow-hidden">
+            <div class="p-6">
+                <div class="flex flex-col sm:flex-row items-center justify-between mb-6 gap-4">
+                    <div class="relative w-full sm:w-72">
+                        <i data-lucide="search" class="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400"></i>
+                        <input type="text" id="search-input" placeholder="Search seasons..." class="w-full pl-10 bg-gray-800/70 border border-white/10 rounded-md focus:ring-[#CCFF00] focus:border-[#CCFF00] text-white">
+                    </div>
+                    <button id="new-league-btn" class="bg-[#CCFF00] text-black hover:bg-[#CCFF00]/90 transition-colors duration-200 px-4 py-2 rounded-md">
+                        <i data-lucide="plus" class="inline-block w-4 h-4 mr-2"></i>
+                        New League
+                    </button>
+                </div>
+                <div class="overflow-x-auto">
+                    <table id="leagues-table" class="w-full">
+                        <thead>
+                            <tr class="bg-gray-800/70">
+                                <th class="text-left p-4 text-gray-400 text-sm uppercase font-semibold">
+                                    <img src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/Premier-League-Logo-White-png-9WUB5CRwZAmPVcDMbqDhz9lm61GJ4L.png" alt="Premier League" class="w-8 h-8">
+                                </th>
+                                <th class="text-left p-4 text-gray-400 text-sm uppercase font-semibold">Season</th>
+                                <th class="text-left p-4 text-gray-400 text-sm uppercase font-semibold hidden md:table-cell">Winner</th>
+                                <th class="text-left p-4 text-gray-400 text-sm uppercase font-semibold hidden lg:table-cell">Second Place</th>
+                                <th class="text-left p-4 text-gray-400 text-sm uppercase font-semibold hidden lg:table-cell">Third Place</th>
+                                <th class="text-left p-4 text-gray-400 text-sm uppercase font-semibold">Status</th>
+                                <th class="text-left p-4 text-gray-400 text-sm uppercase font-semibold">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="leagues-table-body">
+                            <!-- Table rows will be dynamically inserted here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- League Details Section -->
+        <div id="league-details" class="hidden mt-8">
+            <div class="flex items-center gap-4 mb-6">
+                <button id="back-to-leagues" class="text-gray-400 hover:text-[#CCFF00]">
+                    <i data-lucide="arrow-left" class="inline-block w-4 h-4 mr-2"></i>
+                    Back to Leagues
+                </button>
+                <h2 class="text-3xl font-bold text-[#CCFF00]">League <span id="league-id"></span> Details</h2>
+                <button id="edit-league-btn" class="ml-auto bg-[#CCFF00] text-black hover:bg-[#CCFF00]/90 transition-colors duration-200 px-4 py-2 rounded-md flex items-center gap-2">
+                    <i data-lucide="edit" class="w-4 h-4"></i>
+                    <span id="edit-league-text">Edit League</span>
+                </button>
+            </div>
+
+            <div id="league-edit-form" class="hidden bg-white/5 rounded-2xl p-6 space-y-6 mb-6">
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label for="season" class="block text-sm font-medium text-gray-300 mb-2">Season</label>
+                        <input type="text" id="season" name="season" class="w-full p-2 bg-[#141414] border border-[#CCFF00]/20 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-[#CCFF00] focus:border-transparent">
+                    </div>
+                    <div>
+                        <label for="winner" class="block text-sm font-medium text-gray-300 mb-2">Winner</label>
+                        <input type="text" id="winner" name="winner" class="w-full p-2 bg-[#141414] border border-[#CCFF00]/20 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-[#CCFF00] focus:border-transparent">
+                    </div>
+                    <div>
+                        <label for="secondPlace" class="block text-sm font-medium text-gray-300 mb-2">Second Place</label>
+                        <input type="text" id="secondPlace" name="secondPlace" class="w-full p-2 bg-[#141414] border border-[#CCFF00]/20 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-[#CCFF00] focus:border-transparent">
+                    </div>
+                    <div>
+                        <label for="thirdPlace" class="block text-sm font-medium text-gray-300 mb-2">Third Place</label>
+                        <input type="text" id="thirdPlace" name="thirdPlace" class="w-full p-2 bg-[#141414] border border-[#CCFF00]/20 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-[#CCFF00] focus:border-transparent">
+                    </div>
+                </div>
+                <div class="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+                    <div class="w-full sm:w-auto flex-grow">
+                        <label for="csv-upload" class="block text-sm font-medium text-gray-300 mb-2">Upload CSV File</label>
+                        <input id="csv-upload" type="file" accept=".csv" class="hidden">
+                        <div class="flex items-center gap-2">
+                            <button id="upload-btn" class="bg-[#CCFF00] text-black hover:bg-[#CCFF00]/90 transition-colors duration-200 px-4 py-2 rounded-md flex items-center gap-2">
+                                <i data-lucide="upload" class="w-4 h-4"></i>
+                                Upload CSV
+                            </button>
+                            <span id="file-name" class="text-sm text-gray-400">No file chosen</span>
+                        </div>
+                    </div>
+                    <button id="save-btn" class="bg-[#CCFF00] text-black hover:bg-[#CCFF00]/90 transition-colors duration-200 px-4 py-2 rounded-md flex items-center gap-2 disabled:bg-gray-600 disabled:text-gray-400">
+                        <i data-lucide="save" class="w-4 h-4"></i>
+                        Save Changes
+                    </button>
+                </div>
+            </div>
+
+            <div class="bg-black/70 backdrop-blur-md rounded-lg shadow-lg border border-white/10 overflow-hidden mt-6">
+                <div class="border-b border-white/10">
+                    <nav class="flex" aria-label="Tabs">
+                        <button class="tab text-gray-400 hover:text-[#CCFF00] py-4 px-6 block hover:text-[#CCFF00] focus:outline-none text-[#CCFF00] border-b-2 font-medium border-[#CCFF00]" data-tab="matches">
+                            Matches
+                        </button>
+                        <button class="tab text-gray-400 hover:text-[#CCFF00] py-4 px-6 block hover:text-[#CCFF00] focus:outline-none" data-tab="standings">
+                            Standings
+                        </button>
+                        <button class="tab text-gray-400 hover:text-[#CCFF00] py-4 px-6 block hover:text-[#CCFF00] focus:outline-none" data-tab="form">
+                            Form
+                        </button>
+                    </nav>
+                </div>
+
+                <div id="matches-content" class="tab-content p-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-2xl font-bold text-[#CCFF00]">Matches</h3>
+                        <div class="relative">
+                            <select id="view-type" class="bg-gray-800/70 border border-white/10 text-white text-sm rounded-lg focus:ring-[#CCFF00] focus:border-[#CCFF00] block p-2.5 appearance-none pr-8">
+                                <option value="rounds">View by Rounds</option>
+                                <option value="all">View All Matches</option>
+                            </select>
+                            <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-white">
+                                <svg class="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
+                                    <path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" />
+                                </svg>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="matches-table" class="overflow-x-auto"></div>
+                </div>
+
+                <div id="standings-content" class="tab-content hidden p-6">
+                    <h3 class="text-2xl font-bold text-[#CCFF00] mb-4">Standings</h3>
+                    <div class="overflow-x-auto">
+                        <table id="standings-table" class="w-full">
+                            <!-- Table content will be dynamically inserted here -->
+                        </table>
+                    </div>
+                </div>
+
+                <div id="form-content" class="tab-content hidden p-6">
+                    <h3 class="text-2xl font-bold text-[#CCFF00] mb-4">Form</h3>
+                    <div class="overflow-x-auto">
+                        <table id="form-table" class="w-full">
+                            <!-- Table content will be dynamically inserted here -->
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer class="glass-effect">
+        <div class="container">
+            &copy; 2024 WinMix. All rights reserved.
+        </div>
+    </footer>
+
+    <!-- New League Modal -->
+    <div id="new-league-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+        <div class="bg-black/70 backdrop-blur-md rounded-lg shadow-lg border border-white/10 p-6 w-96">
+            <h2 class="text-2xl font-bold text-[#CCFF00] mb-4">Create New League</h2>
+            <p class="mb-4 text-gray-400">Enter the ID for the new league. The name will be automatically generated.</p>
+            <label for="new-league-id" class="block text-sm font-medium text-gray-300 mb-2">League ID</label>
+            <input type="text" id="new-league-id" class="w-full p-2 border border-white/10 rounded-md bg-gray-800/70 text-white mb-4">
+            <button id="create-league-btn" class="w-full bg-[#CCFF00] text-black hover:bg-[#CCFF00]/90 transition-colors duration-200 p-2 rounded-md">Create League</button>
+        </div>
+    </div>
+
+    <script>
+        // Initialize Lucide icons
+        lucide.createIcons();
+
+        // Mock data for leagues
+        let leagues = [
+            {
+                id: "19861",
+                season: "Virtuális Labdarúgás Liga Mód Retail 19861",
+                winner: "Manchester City",
+                secondPlace: "Arsenal",
+                thirdPlace: "Liverpool",
+                status: "In Progress",
+            },
+            {
+                id: "19862",
+                season: "Virtuális Labdarúgás Liga Mód Retail 19862",
+                winner: "Liverpool",
+                secondPlace: "Manchester City",
+                thirdPlace: "Chelsea",
+                status: "Completed",
+            },
+        ];
+
+        let currentLeagueId = null;
+        let matches = [];
+        let standings = [];
+        let teamForms = [];
+        let roundView = 'rounds';
+        let isSaveDisabled = true;
+
+        const leaguesTableBody = document.getElementById('leagues-table-body');
+        const searchInput = document.getElementById('search-input');
+        const newLeagueBtn = document.getElementById('new-league-btn');
+        const newLeagueModal = document.getElementById('new-league-modal');
+        const newLeagueIdInput = document.getElementById('new-league-id');
+        const createLeagueBtn = document.getElementById('create-league-btn');
+        const leagueDetails = document.getElementById('league-details');
+        const backToLeaguesBtn = document.getElementById('back-to-leagues');
+        const csvUpload = document.getElementById('csv-upload');
+        const uploadBtn = document.getElementById('upload-btn');
+        const saveBtn = document.getElementById('save-btn');
+        const matchesTable = document.getElementById('matches-table');
+        const standingsTable = document.getElementById('standings-table');
+        const formTable = document.getElementById('form-table');
+        const viewTypeSelect = document.getElementById('view-type');
+        const editLeagueBtn = document.getElementById('edit-league-btn');
+        const leagueEditForm = document.getElementById('league-edit-form');
+        const editLeagueText = document.getElementById('edit-league-text');
+        const fileName = document.getElementById('file-name');
+
+        function getTopThreeTeams(leagueId) {
+            const savedData = localStorage.getItem(`league_${leagueId}`);
+            if (savedData) {
+                const { standings } = JSON.parse(savedData);
+                return standings.slice(0, 3).map(team => team.team);
+            }
+            return ["-", "-", "-"];
+        }
+
+        function renderLeagues(leaguesToRender) {
+            leaguesTableBody.innerHTML = '';
+            leaguesToRender.forEach(league => {
+                const [winner, secondPlace, thirdPlace] = getTopThreeTeams(league.id);
+                const row = leaguesTableBody.insertRow();
+                row.className = "hover:bg-white/5 transition-colors border-t border-white/10";
+                row.innerHTML = `
+                    <td class="p-4">
+                        <i data-lucide="trophy" class="w-5 h-5 text-[#CCFF00]"></i>
+                    </td>
+                    <td class="p-4">
+                        <div class="flex flex-col">
+                            <span class="text-gray-200 font-medium">${league.season}</span>
+                        </div>
+                    </td>
+                    <td class="p-4 hidden md:table-cell">
+                        <div class="flex flex-col">
+                            <span class="text-gray-200 font-medium">${winner}</span>
+                        </div>
+                    </td>
+                    <td class="p-4 hidden lg:table-cell">
+                        <div class="flex flex-col">
+                            <span class="text-gray-200 font-medium">${secondPlace}</span>
+                        </div>
+                    </td>
+                    <td class="p-4 hidden lg:table-cell">
+                        <div class="flex flex-col">
+                            <span class="text-gray-200 font-medium">${thirdPlace}</span>
+                        </div>
+                    </td>
+                    <td class="p-4">
+                        <span class="px-3 py-1 rounded-full text-sm font-medium ${
+                            league.status === "In Progress"
+                                ? "bg-green-500/20 text-green-400"
+                                : "bg-blue-500/20 text-blue-400"
+                        }">
+                            ${league.status}
+                        </span>
+                    </td>
+                    <td class="p-4">
+                        <div class="flex gap-4">
+                            <button onclick="handleLeagueAction('${league.id}', 'view')" class="text-gray-400 hover:text-gray-200 hover:bg-white/10 p-1 rounded transition-colors">
+                                <i data-lucide="eye" class="w-4 h-4"></i>
+                            </button>
+                            <button onclick="handleLeagueAction('${league.id}', 'edit')" class="text-gray-400 hover:text-gray-200 hover:bg-white/10 p-1 rounded transition-colors">
+                                <i data-lucide="pencil" class="w-4 h-4"></i>
+                            </button>
+                            ${league.status === "In Progress" ? `
+                                <button onclick="handleLeagueAction('${league.id}', 'complete')" class="text-gray-400 hover:text-gray-200 hover:bg-white/10 p-1 rounded transition-colors">
+                                    <i data-lucide="check" class="w-4 h-4"></i>
+                                </button>
+                            ` : ''}
+                            <button onclick="handleLeagueAction('${league.id}', 'delete')" class="text-gray-400 hover:text-red-400 hover:bg-white/10 p-1 rounded transition-colors">
+                                <i data-lucide="trash-2" class="w-4 h-4"></i>
+                            </button>
+                        </div>
+                    </td>
+                `;
+            });
+            lucide.createIcons();
+        }
+
+        function handleLeagueAction(leagueId, action) {
+            switch (action) {
+                case "view":
+                case "edit":
+                    showLeagueDetails(leagueId);
+                    if (action === "edit") {
+                        toggleEditMode();
+                    }
+                    break;
+                case "complete":
+                    leagues = leagues.map(league => league.id === leagueId ? { ...league, status: "Completed" } : league);
+                    const savedData = localStorage.getItem(`league_${leagueId}`);
+                    if (savedData) {
+                        const { matches } = JSON.parse(savedData);
+                        const teamStats = calculateTeamStats(matches);
+                        updateStandingsAndForms(teamStats);
+                        saveLeagueData();
+                    }
+                    renderLeagues(leagues);
+                    break;
+                case "delete":
+                    leagues = leagues.filter(league => league.id !== leagueId);
+                    renderLeagues(leagues);
+                    break;
+            }
+        }
+
+        function showLeagueDetails(leagueId) {
+            currentLeagueId = leagueId;
+            document.getElementById('league-id').textContent = leagueId;
+            leagueDetails.classList.remove('hidden');
+            document.querySelector('h1').classList.add('hidden');
+            document.querySelector('.bg-black\\/70.backdrop-blur-md.rounded-lg.shadow-lg.border.border-white\\/10.overflow-hidden:not(#league-details .bg-black\\/70.backdrop-blur-md.rounded-lg.shadow-lg.border.border-white\\/10.overflow-hidden)').classList.add('hidden');
+            loadLeagueData(leagueId);
+        }
+
+        function hideLeagueDetails() {
+            currentLeagueId = null;
+            leagueDetails.classList.add('hidden');
+            document.querySelector('h1').classList.remove('hidden');
+            document.querySelector('.bg-black\\/70.backdrop-blur-md.rounded-lg.shadow-lg.border.border-white\\/10.overflow-hidden:not(#league-details .bg-black\\/70.backdrop-blur-md.rounded-lg.shadow-lg.border.border-white\\/10.overflow-hidden)').classList.remove('hidden');
+        }
+
+        function loadLeagueData(leagueId) {
+            const savedData = localStorage.getItem(`league_${leagueId}`);
+            if (savedData) {
+                const { matches: savedMatches, standings: savedStandings, teamForms: savedTeamForms } = JSON.parse(savedData);
+                matches = savedMatches;
+                standings = savedStandings;
+                teamForms = savedTeamForms;
+                renderMatches();
+                renderStandings();
+                renderForm();
+                fileName.textContent = "Data loaded successfully";
+                isSaveDisabled = true;
+                saveBtn.disabled = true;
+            } else {
+                matches = [];
+                standings = [];
+                teamForms = [];
+                renderMatches();
+                renderStandings();
+                renderForm();
+                fileName.textContent = "No file chosen";
+                isSaveDisabled = true;
+                saveBtn.disabled = true;
+            }
+        }
+
+        function handleFileUpload(event) {
+            const file = event.target.files[0];
+            if (file) {
+                fileName.textContent = file.name;
+                Papa.parse(file, {
+                    complete: (result) => {
+                        matches = result.data;
+                        const teamStats = calculateTeamStats(matches);
+                        updateStandingsAndForms(teamStats);
+                        renderMatches();
+                        renderStandings();
+                        renderForm();
+                        isSaveDisabled = false;
+                        saveBtn.disabled = false;
+                    },
+                    header: true,
+                });
+            }
+        }
+
+        function calculateTeamStats(matches) {
+            const teamStats = {};
+
+            matches.forEach((match) => {
+                const homeScore = parseInt(match.home_score);
+                const awayScore = parseInt(match.away_score);
+
+                [match.home_team, match.away_team].forEach((team) => {
+                    if (!teamStats[team]) {
+                        teamStats[team] = {
+                            team: team,
+                            played: 0,
+                            won: 0,
+                            drawn: 0,
+                            lost: 0,
+                            goalsFor: 0,
+                            goalsAgainst: 0,
+                            goalDifference: 0,
+                            points: 0,
+                            form: [],
+                            penaltyKicks: 0,
+                        };
+                    }
+                });
+
+                teamStats[match.home_team].played++;
+                teamStats[match.home_team].goalsFor += homeScore;
+                teamStats[match.home_team].goalsAgainst += awayScore;
+
+                teamStats[match.away_team].played++;
+                teamStats[match.away_team].goalsFor += awayScore;
+                teamStats[match.away_team].goalsAgainst += homeScore;
+
+                if (homeScore > awayScore) {
+                    teamStats[match.home_team].won++;
+                    teamStats[match.home_team].points += 3;
+                    teamStats[match.home_team].form.push("W");
+                    teamStats[match.away_team].lost++;
+                    teamStats[match.away_team].form.push("L");
+                } else if (homeScore < awayScore) {
+                    teamStats[match.away_team].won++;
+                    teamStats[match.away_team].points += 3;
+                    teamStats[match.away_team].form.push("W");
+                    teamStats[match.home_team].lost++;
+                    teamStats[match.home_team].form.push("L");
+                } else {
+                    teamStats[match.home_team].drawn++;
+                    teamStats[match.home_team].points++;
+                    teamStats[match.home_team].form.push("D");
+                    teamStats[match.away_team].drawn++;
+                    teamStats[match.away_team].points++;
+                    teamStats[match.away_team].form.push("D");
+                }
+
+                teamStats[match.home_team].goalDifference = teamStats[match.home_team].goalsFor - teamStats[match.home_team].goalsAgainst;
+                teamStats[match.away_team].goalDifference = teamStats[match.away_team].goalsFor - teamStats[match.away_team].goalsAgainst;
+
+                teamStats[match.home_team].form = teamStats[match.home_team].form.slice(-5);
+                teamStats[match.away_team].form = teamStats[match.away_team].form.slice(-5);
+            });
+
+            return teamStats;
+        }
+
+        function updateStandingsAndForms(teamStats) {
+            standings = Object.values(teamStats)
+                .map((stats) => ({
+                    position: 0,
+                    team: stats.team,
+                    played: stats.played,
+                    won: stats.won,
+                    drawn: stats.drawn,
+                    lost: stats.lost,
+                    goalsFor: stats.goalsFor,
+                    goalsAgainst: stats.goalsAgainst,
+                    goalDifference: stats.goalDifference,
+                    points: stats.points,
+                    form: stats.form.join(""),
+                }))
+                .sort((a, b) => {
+                    if (b.points !== a.points) return b.points - a.points;
+                    if (b.goalDifference !== a.goalDifference) return b.goalDifference - a.goalDifference;
+                    return b.goalsFor - a.goalsFor;
+                })
+                .map((team, index) => ({ ...team, position: index + 1 }));
+
+            teamForms = Object.values(teamStats)
+                .map((stats) => ({
+                    position: 0,
+                    team: stats.team,
+                    goalsFor: stats.goalsFor,
+                    goalsAgainst: stats.goalsAgainst,
+                    penaltyKicks: stats.penaltyKicks,
+                    played: stats.played,
+                    points: stats.points,
+                    form: stats.form.join(""),
+                }))
+                .sort((a, b) => b.points - a.points)
+                .map((team, index) => ({ ...team, position: index + 1 }));
+        }
+
+        function renderMatches() {
+            if (roundView === 'rounds') {
+                const matchesByRound = matches.reduce((acc, match) => {
+                    if (!acc[match.round]) {
+                        acc[match.round] = [];
+                    }
+                    acc[match.round].push(match);
+                    return acc;
+                }, {});
+
+                matchesTable.innerHTML = Object.entries(matchesByRound).map(([round, roundMatches]) => `
+                    <div class="mb-6">
+                        <h4 class="text-lg font-semibold mb-2 text-[#CCFF00]">Round: ${round}</h4>
+                        <table class="w-full">
+                            <thead class="bg-gray-800/70">
+                                <tr>
+                                    <th class="text-left p-4 text-gray-400 text-sm uppercase font-semibold">Date</th>
+                                    <th class="text-left p-4 text-gray-400 text-sm uppercase font-semibold">Home Team</th>
+                                    <th class="text-left p-4 text-gray-400 text-sm uppercase font-semibold">Away Team</th>
+                                    <th class="text-left p-4 text-gray-400 text-sm uppercase font-semibold">Half Time</th>
+                                    <th class="text-left p-4 text-gray-400 text-sm uppercase font-semibold">Full Time</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${roundMatches.map((match) => `
+                                    <tr class="hover:bg-white/5 transition-colors border-t border-white/10">
+                                        <td class="p-4 text-gray-200">${match.date}</td>
+                                        <td class="p-4 text-gray-200">${match.home_team}</td>
+                                        <td class="p-4 text-gray-200">${match.away_team}</td>
+                                        <td class="p-4 text-gray-200">${match.ht_home_score}-${match.ht_away_score}</td>
+                                        <td class="p-4 text-gray-200">${match.home_score}-${match.away_score}</td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                `).join('');
+            } else {
+                matchesTable.innerHTML = `
+                    <table class="w-full">
+                        <thead class="bg-gray-800/70">
+                            <tr>
+                                <th class="text-left p-4 text-gray-400 text-sm uppercase font-semibold">Round</th>
+                                <th class="text-left p-4 text-gray-400 text-sm uppercase font-semibold">Date</th>
+                                <th class="text-left p-4 text-gray-400 text-sm uppercase font-semibold">Home Team</th>
+                                <th class="text-left p-4 text-gray-400 text-sm uppercase font-semibold">Away Team</th>
+                                <th class="text-left p-4 text-gray-400 text-sm uppercase font-semibold">Half Time</th>
+                                <th class="text-left p-4 text-gray-400 text-sm uppercase font-semibold">Full Time</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${matches.map((match) => `
+                                <tr class="hover:bg-white/5 transition-colors border-t border-white/10">
+                                    <td class="p-4 text-gray-200">${match.round}</td>
+                                    <td class="p-4 text-gray-200">${match.date}</td>
+                                    <td class="p-4 text-gray-200">${match.home_team}</td>
+                                    <td class="p-4 text-gray-200">${match.away_team}</td>
+                                    <td class="p-4 text-gray-200">${match.ht_home_score}-${match.ht_away_score}</td>
+                                    <td class="p-4 text-gray-200">${match.home_score}-${match.away_score}</td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                `;
+            }
+        }
+
+        function renderStandings() {
+            standingsTable.innerHTML = `
+                <thead class="bg-gray-800/70">
+                    <tr>
+                        <th class="text-left p-4 text-gray-400 text-sm uppercase font-semibold">Pos</th>
+                        <th class="text-left p-4 text-gray-400 text-sm uppercase font-semibold">Team</th>
+                        <th class="text-left p-4 text-gray-400 text-sm uppercase font-semibold">P</th>
+                        <th class="text-left p-4 text-gray-400 text-sm uppercase font-semibold">W</th>
+                        <th class="text-left p-4 text-gray-400 text-sm uppercase font-semibold">D</th>
+                        <th class="text-left p-4 text-gray-400 text-sm uppercase font-semibold">L</th>
+                        <th class="text-left p-4 text-gray-400 text-sm uppercase font-semibold">GF</th>
+                        <th class="text-left p-4 text-gray-400 text-sm uppercase font-semibold">GA</th>
+                        <th class="text-left p-4 text-gray-400 text-sm uppercase font-semibold">GD</th>
+                        <th class="text-left p-4 text-gray-400 text-sm uppercase font-semibold">Pts</th>
+                        <th class="text-left p-4 text-gray-400 text-sm uppercase font-semibold">Form</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${standings.map((team) => `
+                        <tr class="hover:bg-white/5 transition-colors border-t border-white/10">
+                            <td class="p-4 text-gray-200">${team.position}</td>
+                            <td class="p-4 text-gray-200">${team.team}</td>
+                            <td class="p-4 text-gray-200">${team.played}</td>
+                            <td class="p-4 text-gray-200">${team.won}</td>
+                            <td class="p-4 text-gray-200">${team.drawn}</td>
+                            <td class="p-4 text-gray-200">${team.lost}</td>
+                            <td class="p-4 text-gray-200">${team.goalsFor}</td>
+                            <td class="p-4 text-gray-200">${team.goalsAgainst}</td>
+                            <td class="p-4 text-gray-200">${team.goalDifference}</td>
+                            <td class="p-4 text-gray-200">${team.points}</td>
+                            <td class="p-4 text-gray-200">${team.form}</td>
+                        </tr>
+                    `).join('')}
+                </tbody>
+            `;
+        }
+
+        function renderForm() {
+            formTable.innerHTML = `
+                <thead class="bg-gray-800/70">
+                    <tr>
+                        <th class="text-left p-4 text-gray-400 text-sm uppercase font-semibold">Pos</th>
+                        <th class="text-left p-4 text-gray-400 text-sm uppercase font-semibold">Team</th>
+                        <th class="text-left p-4 text-gray-400 text-sm uppercase font-semibold">GF</th>
+                        <th class="text-left p-4 text-gray-400 text-sm uppercase font-semibold">GA</th>
+                        <th class="text-left p-4 text-gray-400 text-sm uppercase font-semibold">PK</th>
+                        <th class="text-left p-4 text-gray-400 text-sm uppercase font-semibold">Played</th>
+                        <th class="text-left p-4 text-gray-400 text-sm uppercase font-semibold">Points</th>
+                        <th class="text-left p-4 text-gray-400 text-sm uppercase font-semibold">Form</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${teamForms.map((team) => `
+                        <tr class="hover:bg-white/5 transition-colors border-t border-white/10">
+                            <td class="p-4 text-gray-200">${team.position}</td>
+                            <td class="p-4 text-gray-200">${team.team}</td>
+                            <td class="p-4 text-gray-200">${team.goalsFor}</td>
+                            <td class="p-4 text-gray-200">${team.goalsAgainst}</td>
+                            <td class="p-4 text-gray-200">${team.penaltyKicks}</td>
+                            <td class="p-4 text-gray-200">${team.played}</td>
+                            <td class="p-4 text-gray-200">${team.points}</td>
+                            <td class="p-4 text-gray-200">${team.form}</td>
+                        </tr>
+                    `).join('')}
+                </tbody>
+            `;
+        }
+
+        function setRoundView(view) {
+            roundView = view;
+            renderMatches();
+        }
+
+        function saveLeagueData() {
+            const leagueData = {
+                matches,
+                standings,
+                teamForms,
+            };
+            localStorage.setItem(`league_${currentLeagueId}`, JSON.stringify(leagueData));
+            isSaveDisabled = true;
+            saveBtn.disabled = true;
+            alert('Data Saved: League data has been successfully saved.');
+            renderLeagues(leagues);
+        }
+
+        function toggleEditMode() {
+            const isEditing = leagueEditForm.classList.toggle('hidden');
+            editLeagueText.textContent = isEditing ? 'Edit League' : 'Cancel Edit';
+            if (!isEditing) {
+                const league = leagues.find(l => l.id === currentLeagueId);
+                document.getElementById('season').value = league.season;
+                document.getElementById('winner').value = league.winner;
+                document.getElementById('secondPlace').value = league.secondPlace;
+                document.getElementById('thirdPlace').value = league.thirdPlace;
+            }
+        }
+
+        // Event listeners
+        searchInput.addEventListener('input', (e) => {
+            const searchTerm = e.target.value.toLowerCase();
+            const filteredLeagues = leagues.filter(league => 
+                Object.values(league).some(value => 
+                    value.toString().toLowerCase().includes(searchTerm)
+                )
+            );
+            renderLeagues(filteredLeagues);
+        });
+
+        newLeagueBtn.onclick = () => {
+            newLeagueModal.style.display = "flex";
+        }
+
+        createLeagueBtn.onclick = () => {
+            const newLeagueId = newLeagueIdInput.value;
+            if (newLeagueId) {
+                const newLeague = {
+                    id: newLeagueId,
+                    season: `Virtuális Labdarúgás Liga Mód Retail ${newLeagueId}`,
+                    winner: "-",
+                    secondPlace: "-",
+                    thirdPlace: "-",
+                    status: "In Progress",
+                };
+                leagues.push(newLeague);
+                renderLeagues(leagues);
+                newLeagueModal.style.display = "none";
+                newLeagueIdInput.value = "";
+            }
+        }
+
+        window.onclick = (event) => {
+            if (event.target == newLeagueModal) {
+                newLeagueModal.style.display = "none";
+            }
+        }
+
+        csvUpload.addEventListener('change', handleFileUpload);
+        uploadBtn.addEventListener('click', () => csvUpload.click());
+        saveBtn.addEventListener('click', saveLeagueData);
+        backToLeaguesBtn.addEventListener('click', hideLeagueDetails);
+        viewTypeSelect.addEventListener('change', (e) => setRoundView(e.target.value));
+        editLeagueBtn.addEventListener('click', toggleEditMode);
+
+        // Tab switching
+        const tabs = document.querySelectorAll('.tab');
+        const tabContents = document.querySelectorAll('.tab-content');
+
+        tabs.forEach(tab => {
+            tab.addEventListener('click', () => {
+                const tabId = tab.getAttribute('data-tab');
+                tabs.forEach(t => t.classList.remove('text-[#CCFF00]', 'border-b-2', 'font-medium', 'border-[#CCFF00]'));
+                tabContents.forEach(content => content.classList.add('hidden'));
+                tab.classList.add('text-[#CCFF00]', 'border-b-2', 'font-medium', 'border-[#CCFF00]');
+                document.getElementById(`${tabId}-content`).classList.remove('hidden');
+            });
+        });
+
+        // Initial render
+        renderLeagues(leagues);
+    </script>
+</body>
+</html>
